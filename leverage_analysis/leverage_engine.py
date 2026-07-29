@@ -154,7 +154,10 @@ def run_dynamic(
         lev_used[i] = lev
         target_n[i] = tgt_notional
         notional[i] = notional_held
-        capped[i] = notional_held < tgt_notional - 1e-6
+        # Relative tolerance: notional reaches 1e12+ on the multi-year compounded
+        # runs, where float64 rounding alone is ~1e-4 -- an absolute epsilon here
+        # reports phantom cap hits.
+        capped[i] = notional_held < tgt_notional * (1.0 - 1e-9)
 
         # --- today's P&L ------------------------------------------------------
         eq *= 1.0 + lev * r[i]

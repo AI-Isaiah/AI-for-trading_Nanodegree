@@ -68,7 +68,7 @@ of the May drawdown but notional is still held exactly flat throughout.
 | Max drawdown | -1.55% | -41.30% | -46.38% | -47.01% | -51.36% |
 | Longest drawdown | 93d | 110d | **93d** | 110d | **96d** |
 | Avg / max leverage | 1x | 30x | 32.4x / 50.0x | 35x | 38.2x / 50.0x |
-| Days at 50x cap | — | — | **49** | — | **107** |
+| Days at 50x cap | — | — | **4** | — | **62** |
 | Worst day | -0.57% | -16.95% | -18.73% | -19.77% | -22.24% |
 
 Calendar-year returns (base 30x):
@@ -140,6 +140,77 @@ Sharpe of 3.01. The 50x cap is very close to free on this data — the interesti
 question is not whether to raise it but whether a -46% drawdown is tolerable at
 all.
 
+## Static 35x vs Dynamic 30→60x
+
+A 60x cap never binds on either dataset (peak requirement is 56.18x on the
+Dec2025 file, 40.36x on UC244), so this is the constant-notional policy running
+completely unconstrained. Its *realised average* leverage lands at 32–34x, which
+is why the honest comparison needs a third column: flat leverage set to the
+dynamic policy's own average. Otherwise the comparison just measures "35 > 33".
+
+### 2025 (261 days, base $1,000,000)
+
+| KPI | Static 35x | **Dynamic 30→60x** | Static 33.78x (avg-matched) |
+|---|---|---|---|
+| Final equity | $10.436m | $10.095m | $9.755m |
+| Equity growth | **+943.65%** | +909.47% | +875.55% |
+| Volatility (ann.) | 89.29% | 86.93% | 86.18% |
+| Sharpe (rf=0) | 2.99 | **3.01** | 2.99 |
+| Sortino | 4.80 | **5.02** | 4.80 |
+| Calmar | **18.35** | 17.86 | 17.56 |
+| Max drawdown | -47.01% | -46.60% | **-45.65%** |
+| Average drawdown | -15.71% | **-12.75%** | -15.13% |
+| Longest drawdown | 80d | **66d** | 80d |
+| Time in drawdown | 77.8% | **74.7%** | 77.8% |
+| Worst single day | -16.17% | **-14.63%** | -15.61% |
+| Worst day P&L | -$707k | -$594k | -$652k |
+| Worst 5-day run | -24.99% | **-28.59%** | -24.21% |
+| Best single day | +15.37% | +22.63% | +14.84% |
+| Avg / max leverage | 35x / 35x | 33.78x / 56.18x | 33.78x / 33.78x |
+| Peak gross notional | $366.4m | **$303.6m** | $330.5m |
+
+### Full period (1,304 days) and UC244 (143 days)
+
+| | Static 35x | Dynamic 30→60x | Avg-matched static |
+|---|---|---|---|
+| **Dec2025, 5y** — growth | 4.51 x10¹⁰ % | 1.224 x10¹⁰ % | 1.226 x10¹⁰ % (32.41x) |
+| Max DD | -47.01% | -46.60% | -44.10% |
+| Sharpe | 4.52 | 4.50 | 4.52 |
+| Calmar | **97.95** | 76.30 | 80.64 |
+| Longest DD | 80d | **66d** | 80d |
+| Worst day | -19.77% | -18.73% | -18.31% |
+| **UC244, 143d** — growth | **+429.61%** | +396.98% | +377.44% (32.36x) |
+| Max DD | -27.23% | -25.67% | -25.36% |
+| Sharpe | 3.17 | **3.30** | 3.17 |
+| Longest DD | 48d | **38d** | 47d |
+| Worst day | -13.99% | **-11.99%** | -12.93% |
+
+### Verdict
+
+**Static 35x wins on raw return everywhere** — and it should, because it simply
+runs more leverage on average (35x vs 32–34x). That is a leverage-level result,
+not a policy result.
+
+**At matched average leverage the dynamic shape wins on the short samples and
+draws on the long one.** 2025: +909.5% vs +875.6% for flat 33.78x. UC244: +397.0%
+vs +377.4%. But over the full 1,304 days it is a dead heat — 1.2237 x10¹⁰ % vs
+1.2257 x10¹⁰ %, i.e. dynamic finishes **0.16% behind** flat leverage at its own
+average. The edge does not survive five years.
+
+**What the dynamic policy reliably improves is the shape of the pain, not its
+size.** On every dataset it beats static 35x on worst single day (-14.63% vs
+-16.17% in 2025), longest drawdown (66d vs 80d), average drawdown (-12.75% vs
+-15.71%) and time under water — while giving up almost nothing in max drawdown.
+
+**Where it is worse: consecutive losing runs.** Worst 5-day is -28.59% vs -24.99%
+for static 35x. That is the policy doing exactly what it is designed to do —
+adding exposure into weakness — and it is the failure mode to size for.
+
+**The balance-sheet argument is the strongest one.** In 2025 the dynamic policy
+delivers 96.7% of static 35x's return on **83% of the peak gross notional**
+($303.6m vs $366.4m). If notional is what is scarce — margin, credit lines,
+capacity — that is the real case for it, more so than the return or the Sharpe.
+
 ## Three findings that matter more than the headline numbers
 
 **1. The 5-year absolute numbers are not investable — they are a compounding
@@ -162,7 +233,7 @@ policy does reliably deliver on both samples is a **shorter time under water**
 
 **3. At 35x the cap does real work, and the constant-notional promise breaks.**
 Base 35x puts the cap threshold at a 30% drawdown, which the long backtest
-crosses repeatedly: 107 days at the 50x cap, and at the worst point notional is
+crosses repeatedly: 62 days at the 50x cap, and at the worst point notional is
 forced down to **69.5%** of target (89.4% for base 30x). So at 35x the policy is
 *not* holding notional constant through the deep drawdowns — it is a 30x-style
 policy that gives up and deleverages exactly when the drawdown is worst. If the
