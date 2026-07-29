@@ -81,6 +81,65 @@ Calendar-year returns (base 30x):
 | 2024 | 9.6% | 999% | 1,350% |
 | 2025 | 8.2% | 686% | 899% |
 
+## 2025 only, base 30x — what cap is needed to never be forced down?
+
+**56.18x.** (Practical limit: 57x, or 60x for headroom.)
+
+Solving this looks circular — a higher cap means more leverage in the drawdown,
+which deepens the drawdown, which demands more leverage again. It isn't: running
+the policy **uncapped** resolves the loop in one pass, and the highest leverage
+it reaches is exactly the cap that would just never bind. Uncapped, 2025 bottoms
+at **-46.60%**, and `30 / (1 - 0.4660) = 56.182`. Verified by sweep — at a cap of
+56.180x the policy is still forced down on one day; at 56.182x it is never
+capped, and every higher cap gives an identical path.
+
+At the 50x cap the constraint binds on only **3 days** (22, 25, 26 Aug 2025) and
+the worst forced cut leaves notional at **89.4% of target**:
+
+| Date | Equity | Target notional | Required lev | Drawdown |
+|---|---|---|---|---|
+| 2025-08-20 | $2.615m | $128.60m | 43.81x | -38.99% |
+| 2025-08-21 | $2.527m | $128.60m | 49.17x | -41.05% |
+| 2025-08-22 | $2.404m | $128.60m | **50.89x** | -43.92% |
+| 2025-08-25 | $2.289m | $128.60m | **53.50x** | **-46.60%** |
+| 2025-08-26 | $2.807m | $128.60m | **56.18x** | -34.52% |
+
+### Full 2025 KPIs (261 days, base $1,000,000)
+
+| KPI | Unlevered 1x | Static 30x | Dynamic 30→50x | Dynamic 30→56.18x |
+|---|---|---|---|---|
+| **Final equity** | $1.082m | $7.861m | $9.990m | **$10.095m** |
+| **Equity growth** | +8.19% | +686.07% | +899.01% | **+909.47%** |
+| CAGR | 7.90% | 632.12% | 822.78% | 832.12% |
+| Volatility (ann.) | 2.55% | 76.53% | 86.50% | 86.93% |
+| Sharpe (rf=0) | 2.99 | 2.99 | 3.01 | 3.01 |
+| Sortino | 4.80 | 4.80 | 4.99 | 5.02 |
+| Calmar | 5.10 | 15.30 | 17.74 | 17.86 |
+| **Max drawdown** | -1.55% | -41.30% | -46.38% | **-46.60%** |
+| Max DD date | 2025-08-25 | 2025-08-25 | 2025-08-25 | 2025-08-25 |
+| Average drawdown | -0.42% | -13.32% | -12.85% | -12.75% |
+| Longest drawdown | 67d | 80d | 67d | **66d** |
+| Time in drawdown | 75.1% | 77.8% | 75.1% | 74.7% |
+| Trough → new high | — | — | 32d | 31d |
+| **Worst single day** | -0.46% | -13.86% | **-14.63%** | **-14.63%** |
+| Worst day date | 2025-07-09 | 2025-07-09 | 2025-07-09 | 2025-07-09 |
+| Worst day P&L | -$5k | -$501k | -$594k | -$594k |
+| Worst 5-day run | -0.78% | -21.72% | -28.59% | -28.59% |
+| Best single day | +0.44% | +13.18% | +20.14% | +22.63% |
+| Win rate | 59.0% | 59.0% | 59.0% | 59.0% |
+| Profit factor | 1.60 | 1.60 | 1.61 | 1.61 |
+| Avg / max leverage | 1x | 30x | 33.82x / 50.00x | 33.78x / **56.18x** |
+| Days above 30x | 0 | 0 | 195 | 194 |
+| **Days at cap** | — | — | **3** | **0** |
+| Notional min → max | $1.0m → $1.1m | $28.1m → $236.4m | $30.0m → $300.5m | $30.0m → $303.6m |
+
+**Raising the cap from 50x to 56.18x buys almost nothing.** It removes the only 3
+forced cuts of the year and adds 10.4 points of return (899.0% → 909.5%, a 1.2%
+improvement in final equity) for 0.22 points more drawdown, at an identical
+Sharpe of 3.01. The 50x cap is very close to free on this data — the interesting
+question is not whether to raise it but whether a -46% drawdown is tolerable at
+all.
+
 ## Three findings that matter more than the headline numbers
 
 **1. The 5-year absolute numbers are not investable — they are a compounding

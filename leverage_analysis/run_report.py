@@ -26,6 +26,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import pandas as pd
 
+import numpy as np
 import quantstats as qs
 
 from leverage_engine import (
@@ -120,12 +121,34 @@ def plot_diagnostics(static, dynamic, out_dir, base, cap, label):
     plt.close(fig)
 
 
-def run_one(csv_path: str, base: float, cap: float, dataset: str) -> pd.DataFrame:
+def solve_min_cap(unlev, start_equity, base) -> tuple[float, float]:
+    """
+    Smallest cap at which the policy is never forced to cut notional.
+
+    Running the policy uncapped is already the fixed point: the highest leverage
+    it reaches is exactly the cap that would just never bind (raising the cap
+    deepens the drawdown, which raises the leverage required -- the uncapped run
+    resolves that circularity in one pass).  Returns (min_cap, uncapped_max_dd).
+    """
+    free = run_dynamic(unlev, start_equity, base, np.inf)
+    max_dd = (free.equity / free.equity.cummax() - 1.0).min()
+    return float(free.leverage.max()), float(max_dd)
+
+
+def run_one(csv_path: str, base: float, cap: float, dataset: str,
+            start: str | None = None, end: str | None = None,
+            start_equity_override: float | None = None,
+            tag: str | None = None) -> pd.DataFrame:
     label = dataset.replace("_", " ").upper()
-    out_dir = os.path.join(OUT_DIR, dataset, f"{base:g}x")
+    out_dir = os.path.join(OUT_DIR, dataset, tag or f"{base:g}x")
     os.makedirs(out_dir, exist_ok=True)
 
     unlev, start_equity = load_returns(csv_path)
+    if start or end:
+        unlev = unlev.loc[start or None:end or None]
+        label = f"{label} [{unlev.index[0].date()} → {unlev.index[-1].date()}]"
+    if start_equity_override is not None:
+        start_equity = start_equity_override
     static = run_static(unlev, start_equity, base)
     dynamic = run_dynamic(unlev, start_equity, base, cap)
 
@@ -166,12 +189,14 @@ def run_one(csv_path: str, base: float, cap: float, dataset: str) -> pd.DataFram
 
 def _fmt(summary: pd.DataFrame) -> pd.DataFrame:
     d = summary.copy()
-    for c in ["total_return", "cagr", "ann_vol", "max_dd", "best_day", "worst_day",
-              "win_rate"]:
+    for c in ["total_return", "cagr", "ann_vol", "max_dd", "avg_dd", "pct_time_in_dd",
+              "best_day", "worst_day", "worst_5d", "win_rate"]:
         d[c] = (d[c] * 100).round(2).astype(str) + "%"
-    for c in ["final_equity", "min_notional", "max_notional", "final_notional"]:
+    for c in ["final_equity", "min_notional", "max_notional", "final_notional",
+              "worst_day_pnl"]:
         d[c] = (d[c] / 1e6).round(3).astype(str) + "m"
-    for c in ["sharpe", "sortino", "calmar", "avg_leverage", "max_leverage"]:
+    for c in ["sharpe", "sortino", "calmar", "avg_leverage", "max_leverage",
+              "profit_factor"]:
         d[c] = d[c].round(2)
     return d
 
@@ -184,6 +209,13 @@ def main():
     p.add_argument("--max-lev", type=float, default=MAX_LEV)
     p.add_argument("--all", action="store_true",
                    help="run every dataset at 30x and 35x")
+    p.add_argument("--start", help="restrict to dates >= this (YYYY-MM-DD)")
+    p.add_argument("--end", help="restrict to dates <= this (YYYY-MM-DD)")
+    p.add_argument("--start-equity", type=float,
+                   help="override the equity the window starts from")
+    p.add_argument("--tag", help="output sub-directory name (default '<base>x')")
+    p.add_argument("--solve-cap", action="store_true",
+                   help="report the smallest cap that never binds, then use it")
     a = p.parse_args()
 
     if a.all:
@@ -201,7 +233,17 @@ def main():
     else:
         p.error("pass --csv, --dataset or --all")
 
-    run_one(csv_path, a.base_lev, a.max_lev, dataset)
+    cap = a.max_lev
+    if a.solve_cap:
+        unlev, se = load_returns(csv_path)
+        if a.start or a.end:
+            unlev = unlev.loc[a.start or None:a.end or None]
+        cap, free_dd = solve_min_cap(unlev, a.start_equity or se, a.base_lev)
+        print(f"Smallest never-binding cap at base {a.base_lev:g}x: "
+              f"{cap:.3f}x  (uncapped max DD {free_dd*100:.2f}%, "
+              f"{a.base_lev:g}/(1{free_dd:+.4f}) = {a.base_lev/(1+free_dd):.3f})")
+
+    run_one(csv_path, a.base_lev, cap, dataset, a.start, a.end, a.start_equity, a.tag)
 
 
 if __name__ == "__main__":

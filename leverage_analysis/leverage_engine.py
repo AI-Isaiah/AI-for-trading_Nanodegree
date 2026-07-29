@@ -178,10 +178,22 @@ def run_dynamic(
 # --------------------------------------------------------------------------- #
 # Stats
 # --------------------------------------------------------------------------- #
+def _dd_spells(dd: pd.Series) -> tuple[int, int]:
+    """(longest drawdown spell in observations, days spent under water)."""
+    under = dd < -1e-12
+    longest = run = 0
+    for u in under:
+        run = run + 1 if u else 0
+        longest = max(longest, run)
+    return longest, int(under.sum())
+
+
 def summarise(path: Path, name: str) -> dict:
     r = path.returns
     eq = path.equity
     dd = eq / eq.cummax() - 1.0
+    longest_dd, days_under = _dd_spells(dd)
+    gains, losses = r[r > 0].sum(), -r[r < 0].sum()
     years = len(r) / PERIODS_PER_YEAR
     growth = eq.iloc[-1] / path.start_equity
     cagr = growth ** (1 / years) - 1.0 if growth > 0 else np.nan
@@ -200,10 +212,18 @@ def summarise(path: Path, name: str) -> dict:
         "sharpe": ann_mean / vol if vol else np.nan,
         "sortino": ann_mean / downside if downside else np.nan,
         "max_dd": dd.min(),
+        "max_dd_date": dd.idxmin().date().isoformat(),
+        "avg_dd": dd[dd < 0].mean() if (dd < 0).any() else 0.0,
+        "longest_dd_days": longest_dd,
+        "pct_time_in_dd": days_under / len(dd),
         "calmar": cagr / abs(dd.min()) if dd.min() else np.nan,
         "best_day": r.max(),
         "worst_day": r.min(),
+        "worst_day_date": r.idxmin().date().isoformat(),
+        "worst_day_pnl": (eq.shift(1).fillna(path.start_equity) * r).min(),
+        "worst_5d": r.rolling(5).apply(lambda x: (1 + x).prod() - 1).min(),
         "win_rate": (r > 0).mean(),
+        "profit_factor": gains / losses if losses else np.nan,
         "avg_leverage": path.leverage.mean(),
         "max_leverage": path.leverage.max(),
         "days_above_base": int((path.leverage > path.base_lev + 1e-9).sum()),
